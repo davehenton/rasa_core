@@ -22,15 +22,14 @@ from typing import Text
 
 from rasa_core import utils
 from rasa_core.actions import Action
-from rasa_core.actions.action import ActionListen, ActionRestart
+from rasa_core.actions.action import (ActionListen, ActionRestart,
+                                      ActionDefaultFallback)
 from rasa_core.actions.factories import (
     action_factory_by_name,
     ensure_action_name_uniqueness)
-from rasa_core.conversation import DefaultTopic
-from rasa_core.conversation import Topic
 from rasa_core.slots import Slot
 from rasa_core.trackers import DialogueStateTracker, SlotSet
-from rasa_core.utils import read_yaml_file
+from rasa_core.utils import read_file, read_yaml_string
 
 logger = logging.getLogger(__name__)
 
@@ -86,14 +85,13 @@ class Domain(with_metaclass(abc.ABCMeta, object)):
     """The domain specifies the universe in which the bot's policy acts.
 
     A Domain subclass provides the actions the bot can take, the intents
-    and entities it can recognise, and the topics it knows about."""
+    and entities it can recognise"""
 
-    DEFAULT_ACTIONS = [ActionListen(), ActionRestart()]
+    DEFAULT_ACTIONS = [ActionListen(), ActionRestart(),
+                       ActionDefaultFallback()]
 
-    def __init__(self, topics=None, store_entities_as_slots=True,
+    def __init__(self, store_entities_as_slots=True,
                  restart_intent="restart"):
-        self.default_topic = DefaultTopic
-        self.topics = topics if topics is not None else []
         self.store_entities_as_slots = store_entities_as_slots
         self.restart_intent = restart_intent
 
@@ -394,47 +392,47 @@ class Domain(with_metaclass(abc.ABCMeta, object)):
 
 
 class TemplateDomain(Domain):
+
     @classmethod
     def load(cls, filename, action_factory=None):
         if not os.path.isfile(filename):
             raise Exception(
                     "Failed to load domain specification from '{}'. "
                     "File not found!".format(os.path.abspath(filename)))
+        return cls.load_from_yaml(read_file(filename), action_factory=action_factory)
 
-        cls.validate_domain_yaml(filename)
-        data = read_yaml_file(filename)
+    @classmethod
+    def load_from_yaml(cls, yaml, action_factory=None):
+        cls.validate_domain_yaml(yaml)
+        data = read_yaml_string(yaml)
         utter_templates = cls.collect_templates(data.get("templates", {}))
         if not action_factory:
             action_factory = data.get("action_factory", None)
-        topics = [Topic(name) for name in data.get("topics", [])]
         slots = cls.collect_slots(data.get("slots", {}))
         additional_arguments = data.get("config", {})
-        return TemplateDomain(
-                data.get("intents", []),
-                data.get("entities", []),
-                slots,
-                utter_templates,
-                data.get("actions", []),
-                data.get("action_names", []),
-                action_factory,
-                topics,
-                **additional_arguments
+        return cls(
+            data.get("intents", []),
+            data.get("entities", []),
+            slots,
+            utter_templates,
+            data.get("actions", []),
+            data.get("action_names", []),
+            action_factory,
+            **additional_arguments
         )
 
     @classmethod
-    def validate_domain_yaml(cls, filename):
+    def validate_domain_yaml(cls, yaml):
         """Validate domain yaml."""
         from pykwalify.core import Core
-        import ruamel
-        import warnings
-        warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)
 
         log = logging.getLogger('pykwalify')
         log.setLevel(logging.WARN)
 
         schema_file = pkg_resources.resource_filename(__name__,
                                                       "schemas/domain.yml")
-        c = Core(source_file=filename,
+        source_data = utils.read_yaml_string(yaml)
+        c = Core(source_data=source_data,
                  schema_files=[schema_file])
         try:
             c.validate(raise_exception=True)
@@ -443,7 +441,7 @@ class TemplateDomain(Domain):
                              "Make sure the file is correct, to do so"
                              "take a look at the errors logged during "
                              "validation previous to this exception. "
-                             "".format(os.path.abspath(filename)))
+                             "".format(os.path.abspath(input)))
 
     @staticmethod
     def collect_slots(slot_dict):
@@ -481,7 +479,7 @@ class TemplateDomain(Domain):
         return templates
 
     def __init__(self, intents, entities, slots, templates, action_classes,
-                 action_names, action_factory, topics, **kwargs):
+                 action_names, action_factory, **kwargs):
         self._intents = intents
         self._entities = entities
         self._slots = slots
@@ -491,7 +489,7 @@ class TemplateDomain(Domain):
         self._factory_name = action_factory
         self._actions = self.instantiate_actions(
                 action_factory, action_classes, action_names, templates)
-        super(TemplateDomain, self).__init__(topics, **kwargs)
+        super(TemplateDomain, self).__init__(**kwargs)
 
     @staticmethod
     def instantiate_actions(factory_name, action_classes, action_names,
@@ -505,12 +503,9 @@ class TemplateDomain(Domain):
     def _slot_definitions(self):
         return {slot.name: slot.persistence_info() for slot in self.slots}
 
-    def persist(self, filename):
-        import yaml
-
+    def as_dict(self):
         additional_config = {
             "store_entities_as_slots": self.store_entities_as_slots}
-        topic_names = [t.name for t in self.topics]
         action_names = self.action_names[len(Domain.DEFAULT_ACTIONS):]
 
         domain_data = {
@@ -519,16 +514,19 @@ class TemplateDomain(Domain):
             "entities": self.entities,
             "slots": self._slot_definitions(),
             "templates": self.templates,
-            "topics": topic_names,
             "actions": self._action_classes,  # class names of the actions
             "action_names": action_names,  # names in stories
             "action_factory": self._factory_name
         }
+        return domain_data
 
-        with io.open(filename, 'w', encoding="utf-8") as yaml_file:
-            yaml.safe_dump(domain_data, yaml_file,
-                           default_flow_style=False,
-                           allow_unicode=True)
+    def persist(self, filename):
+        domain_data = self.as_dict()
+        utils.dump_obj_as_yaml_to_file(filename, domain_data)
+
+    def as_yaml(self):
+        domain_data = self.as_dict()
+        return utils.dump_obj_as_yaml_to_string(domain_data)
 
     @utils.lazyproperty
     def templates(self):
