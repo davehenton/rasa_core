@@ -451,7 +451,7 @@ def create_app(model_directory,  # type: Text
         logger.debug("Finished loading new agent.")
         return jsonify({'success': 1})
 
-    @app.route("/model/time_of_last_train", methods=['GET'])
+    @app.route("/model/time-of-last-train", methods=['GET'])
     @requires_auth(auth_token)
     @cross_origin(origins=cors_origins)
     @ensure_loaded_agent(agent)
