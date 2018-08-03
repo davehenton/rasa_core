@@ -293,8 +293,8 @@ def test_predict(http_app, app):
     cid = str(uuid.uuid1())
 
     client.append_events_to_tracker(cid, test_events[:2])
-
-    tracker = client.tracker_json(cid)
+    domain = app.get('/domain', params={'token': os.getenv('RASA_CORE_TOKEN')})
+    tracker = client.tracker(cid, domain)
     event_dicts = [ev.as_dict() for ev in tracker.applied_events()]
-    response = app.post('/predict', params={'token': os.getenv('RASA_CORE_TOKEN')}, json=event_guys)
+    response = app.post('/predict', params={'token': os.getenv('RASA_CORE_TOKEN')}, json=event_dicts)
     assert response.status_code == 200
