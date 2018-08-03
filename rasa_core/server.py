@@ -314,7 +314,7 @@ def create_app(model_directory,  # type: Text
         agent().tracker_store.save(tracker)
         return jsonify(tracker.current_state(should_include_events=True))
 
-    @app.route("/predict", methods=['GET'])
+    @app.route("/predict", methods=['POST'])
     @requires_auth(auth_token)
     @cross_origin(origins=cors_origins)
     @ensure_loaded_agent(agent)
