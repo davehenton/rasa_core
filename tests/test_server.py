@@ -295,7 +295,7 @@ def test_predict(http_app, app):
     cid = str(uuid.uuid1())
 
     client.append_events_to_tracker(cid, test_events[:2])
-    out = app.get('/domain', headers={'Accept':'yml'}).content
+    out = app.get('/domain', headers={'Accept': 'yml'}).content
     domain = TemplateDomain.load_from_yaml(out)
     tracker = client.tracker(cid, domain)
     event_dicts = [ev.as_dict() for ev in tracker.applied_events()]
