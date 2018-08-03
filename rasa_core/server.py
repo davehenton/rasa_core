@@ -314,6 +314,23 @@ def create_app(model_directory,  # type: Text
         agent().tracker_store.save(tracker)
         return jsonify(tracker.current_state(should_include_events=True))
 
+    @app.route("/predict", methods=['GET'])
+    @requires_auth(auth_token)
+    @cross_origin(origins=cors_origins)
+    @ensure_loaded_agent(agent)
+    def tracker_predict():
+        """ Given a tracker, it predicts the next action"""
+        sender_id = UserMessage.DEFAULT_SENDER_ID
+        request_params = request.get_json(force=True)
+        tracker = DialogueStateTracker.from_dict(sender_id,
+                                                 request_params,
+                                                 agent().domain)
+        policy_ensemble = agent().policy_ensemble
+        probabilities = policy_ensemble.probabilities_using_best_policy(tracker, agent().domain)
+        probability_dict = {agent().domain.action_for_index(idx):probability
+                            for idx, probability in enumerate(probabilities)}
+        return jsonify(probability_dict)
+
     @app.route("/domain",
                methods=['GET'])
     @cross_origin(origins=cors_origins)
@@ -337,24 +354,6 @@ def create_app(model_directory,  # type: Text
                     or yml ("Accept: application/x-yml"). 
                     Make sure you've set the appropriate Accept header.""",
                     status=406)
-
-    @app.route("/predict", methods=['POST'])
-    @requires_auth(auth_token)
-    @cross_origin(origins=cors_origins)
-    @ensure_loaded_agent(agent)
-    def tracker_predict():
-        """ Given a tracker, it predicts the next action"""
-        sender_id = UserMessage.DEFAULT_SENDER_ID
-        request_params = request.get_json(force=True)
-        tracker = DialogueStateTracker.from_dict(sender_id,
-                                                 request_params,
-                                                 agent().domain)
-        policy_ensemble = agent().policy_ensemble
-        probabilities = policy_ensemble.probabilities_using_best_policy(tracker, agent().domain)
-        probability_dict = {agent().domain.action_for_index(idx):probability
-                            for idx, probability in enumerate(probabilities)}
-        return jsonify(probability_dict)
-
 
     @app.route("/conversations/<sender_id>/parse",
                methods=['GET', 'POST', 'OPTIONS'])
