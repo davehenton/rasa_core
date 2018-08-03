@@ -28,6 +28,7 @@ from rasa_core.policies.memoization import AugmentedMemoizationPolicy
 from rasa_core.remote import RasaCoreClient, RemoteAgent
 from rasa_core.utils import EndpointConfig
 from tests.conftest import DEFAULT_STORIES_FILE
+from rasa_core.domain import TemplateDomain
 
 # a couple of event instances that we can use for testing
 test_events = [
@@ -294,7 +295,8 @@ def test_predict(http_app, app):
     cid = str(uuid.uuid1())
 
     client.append_events_to_tracker(cid, test_events[:2])
-    domain = app.get('/domain')
+    out = app.get('/domain', headers={'Accept':'yml'}).content
+    domain = TemplateDomain.load_from_yaml(out)
     tracker = client.tracker(cid, domain)
     event_dicts = [ev.as_dict() for ev in tracker.applied_events()]
     response = app.post('/predict',
