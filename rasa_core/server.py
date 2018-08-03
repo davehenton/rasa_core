@@ -328,7 +328,7 @@ def create_app(model_directory,  # type: Text
                                                  agent().domain)
         policy_ensemble = agent().policy_ensemble
         probabilities = policy_ensemble.probabilities_using_best_policy(tracker, agent().domain)
-        probability_dict = {agent().domain.action_for_index(idx):probability
+        probability_dict = {agent().domain.action_for_index(idx).name():probability
                             for idx, probability in enumerate(probabilities)}
         return jsonify(probability_dict)
 
