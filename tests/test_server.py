@@ -286,3 +286,15 @@ def test_remote_append_events(http_app):
     evts = tracker.get("events")
     expected = [ActionExecuted(ACTION_LISTEN_NAME)] + test_events[:2]
     assert events.deserialise_events(evts) == expected
+
+def test_predict(http_app, app):
+    client = RasaCoreClient(EndpointConfig(http_app))
+
+    cid = str(uuid.uuid1())
+
+    client.append_events_to_tracker(cid, test_events[:2])
+
+    tracker = client.tracker_json(cid)
+    event_dicts = [ev.as_dict() for ev in tracker.applied_events()]
+    response = app.post('/predict', params={'token': os.getenv('RASA_CORE_TOKEN')}, json=event_guys)
+    assert response.status_code == 200
