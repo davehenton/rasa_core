@@ -59,7 +59,7 @@ def create_argument_parser():
     parser.add_argument(
             '--auth_token',
             type=str,
-            help="Enable token based authentication. Requests need to provide "
+            help="Enable token-based authentication. Requests need to provide "
                  "the token to be accepted.")
     parser.add_argument(
             '-o', '--log_file',
@@ -133,6 +133,7 @@ def requires_auth(token=None):
         return decorated
 
     return decorator
+
 
 
 def _create_agent(

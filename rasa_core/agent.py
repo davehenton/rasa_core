@@ -23,6 +23,7 @@ from rasa_core.policies.memoization import MemoizationPolicy
 from rasa_core.processor import MessageProcessor
 from rasa_core.tracker_store import InMemoryTrackerStore, TrackerStore
 from rasa_core.trackers import DialogueStateTracker
+import time
 from rasa_core.utils import EndpointConfig
 
 logger = logging.getLogger(__name__)
@@ -395,9 +396,9 @@ class Agent(object):
             return domain
         else:
             raise ValueError(
-                    "Invalid param `domain`. Expected a path to a domain "
-                    "specification or a domain instance. But got "
-                    "type '{}' with value '{}'".format(type(domain), domain))
+                "Invalid param `domain`. Expected a path to a domain "
+                "specification or a domain instance. But got "
+                "type '{}' with value '{}'".format(type(domain), domain))
 
     @staticmethod
     def create_tracker_store(store, domain):

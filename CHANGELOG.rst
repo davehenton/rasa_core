@@ -71,6 +71,7 @@ Added
   the ``domain.yml``)
 - options to prevent slack from making re-deliver message upon meeting failure condition.
   the default is to ignore ``http_timeout``.
+
 - added ability to create domain from yaml string and export a domain to a yaml string
 - added server endpoint to fetch domain as json or yaml
 - new default action ActionDefaultFallback
