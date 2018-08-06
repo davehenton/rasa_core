@@ -319,7 +319,7 @@ def create_app(model_directory,  # type: Text
     @cross_origin(origins=cors_origins)
     @ensure_loaded_agent(agent)
     def tracker_predict():
-        """ Given a tracker, it predicts the next action"""
+        """ Given a list of events, predicts the next action"""
         sender_id = UserMessage.DEFAULT_SENDER_ID
         request_params = request.get_json(force=True)
         tracker = DialogueStateTracker.from_dict(sender_id,
